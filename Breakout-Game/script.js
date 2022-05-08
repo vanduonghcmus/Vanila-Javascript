@@ -1,0 +1,221 @@
+const rulesBtn = document.getElementById("rules-btn");
+const closeBtn = document.getElementById("close-btn");
+const rules = document.getElementById("rules");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+// Create score
+let score = 0;
+
+// Count brick
+const brickRowCount = 9;
+const brickColumnCount = 5;
+
+// Create ball props
+const ball = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  size: 10,
+  speed: 4,
+  dx: 4,
+  dy: -4,
+};
+
+// Create paddle props
+const paddle = {
+  x: canvas.width / 2 - 40,
+  y: canvas.height - 20,
+  w: 80,
+  h: 10,
+  speed: 8,
+  dx: 0,
+};
+
+// Creat brick props
+const brickInfo = {
+  w: 70,
+  h: 20,
+  padding: 10,
+  offsetX: 45, // ranger x of brick
+  offsetY: 60, // ranger y of brick
+  visible: true,
+};
+
+// Create brick
+const bricks = [];
+for (let i = 0; i < brickRowCount; i++) {
+  bricks[i] = [];
+  for (let j = 0; j < brickColumnCount; j++) {
+    const x = i * (brickInfo.w + brickInfo.padding) + brickInfo.offsetX;
+    const y = j * (brickInfo.h + brickInfo.padding) + brickInfo.offsetY;
+    bricks[i][j] = { x, y, ...brickInfo };
+  }
+}
+
+// Draw ball
+function drawBall() {
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2); // Outer circle
+  ctx.fillStyle = "#0095dd";
+  ctx.fill();
+  ctx.closePath();
+}
+
+// Draw paddle
+function drawPaddle() {
+  ctx.beginPath();
+  ctx.fillStyle = "#0095dd";
+  ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+  ctx.closePath();
+}
+
+// Draw score
+function drawScore() {
+  ctx.font = "20px Arial";
+  ctx.fillText(`Score: ${score}`, canvas.width - 100, 30);
+}
+
+function drawBrick() {
+  bricks.forEach((column) => {
+    column.forEach((brick) => {
+      ctx.beginPath();
+      ctx.fillStyle = brick.visible ? "#0095dd" : "transparent";
+      ctx.fillRect(brick.x, brick.y, brick.w, brick.h);
+      ctx.closePath();
+    });
+  });
+}
+
+// move paddle on canvas
+function movePaddle() {
+  paddle.x += paddle.dx;
+
+  if (paddle.x + paddle.w > canvas.width) {
+    paddle.x = canvas.width - paddle.w;
+  }
+
+  if (paddle.x < 0) {
+    paddle.x = 0;
+  }
+}
+
+// Move ball on canvas
+function moveBall() {
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  // Wall collision (right/left)
+  if (ball.x + ball.size > canvas.width || ball.x - ball.size < 0) {
+    ball.dx *= -1; // ball.dx= ball.dx * -1
+  }
+
+  // Wall collision (top/bottom)
+  if (ball.y + ball.size > canvas.height || ball.y - ball.size < 0) {
+    ball.dy *= -1;
+  }
+
+  // paddle collision
+  //@todo check out side, check inner side, check bottom
+  if (
+    ball.x - ball.size > paddle.x &&
+    ball.x + ball.size < paddle.x + paddle.w &&
+    ball.y + ball.size > paddle.y
+  ) {
+    ball.dy = -ball.speed;
+  }
+
+  // Brick collision
+  //@todo: left & right & top & bottom brick side check,
+  bricks.forEach((column) => {
+    column.forEach((brick) => {
+      if (brick.visible) {
+        if (
+          ball.x - ball.size > brick.x && // check left
+          ball.x + ball.size < brick.x + brick.w && // check right
+          ball.y + ball.size > brick.y && // check top
+          ball.y - ball.size < brick.y + brick.h // check bottom
+        ) {
+          ball.dy *= -1;
+          brick.visible = false;
+          increaseScore();
+        }
+      }
+    });
+  });
+
+  if (ball.y + ball.size > canvas.height) {
+    showAllBrick();
+    score = 0;
+  }
+}
+
+// Increase score
+function increaseScore() {
+  score++;
+  if (score % (brickRowCount * brickColumnCount) === 0) {
+    showAllBrick();
+  }
+}
+
+// Show all brick
+function showAllBrick() {
+  bricks.forEach((column) => {
+    column.forEach((brick) => (brick.visible = true));
+  });
+}
+
+// Draw every things
+function draw() {
+  // clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawBall();
+  drawPaddle();
+  drawScore();
+  drawBrick();
+}
+
+function update() {
+  movePaddle();
+  moveBall();
+  //Draw every things
+  draw();
+
+  requestAnimationFrame(update);
+}
+
+update();
+
+// Key down
+function keyDown(e) {
+  if (e.key === "Right" || e.key === "ArrowRight") {
+    paddle.dx += paddle.speed;
+  } else if (e.key === "Left" || e.key === "ArrowLeft") {
+    paddle.dx -= paddle.speed;
+  }
+}
+
+// Key up
+function keyUp(e) {
+  if (
+    e.key === "Right" ||
+    e.key === "ArrowRight" ||
+    e.key === "Left" ||
+    e.key === "ArrowLeft"
+  ) {
+    paddle.dx = 0;
+  }
+}
+
+// Move paddle listener
+window.addEventListener("keydown", keyDown);
+window.addEventListener("keyup", keyUp);
+
+// Rules and close event handlers
+rulesBtn.addEventListener("click", () => {
+  rules.classList.add("show");
+});
+
+closeBtn.addEventListener("click", () => {
+  rules.classList.remove("show");
+});
